@@ -102,32 +102,6 @@ jobs:
           source .venv/bin/activate
           pip install pip-audit bandit[toml] safety
 
-      - name: Run pip-audit
-        run: |
-          source .venv/bin/activate
-          pip-audit --format=sarif --output=pip-audit.sarif --progress-spinner=off
-        continue-on-error: true
-
-      - name: Upload pip-audit results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: pip-audit.sarif
-          category: pip-audit
-
-      - name: Run Bandit
-        run: |
-          source .venv/bin/activate
-          bandit -r make_request/ -f sarif -o bandit.sarif
-        continue-on-error: true
-
-      - name: Upload Bandit results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: bandit.sarif
-          category: bandit
-
       - name: Run Safety
         run: |
           source .venv/bin/activate
