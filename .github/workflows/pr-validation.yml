@@ -1,0 +1,178 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pr:
+    name: Validate Pull Request
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for conventional commit validation
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Validate conventional commits
+        uses: wagoid/commitlint-github-action@v5
+        with:
+          configFile: '.commitlintrc.json'
+          helpURL: 'https://www.conventionalcommits.org/'
+        continue-on-error: true
+
+      - name: Check for breaking changes
+        run: |
+          # Check if this PR introduces breaking changes
+          if git log --format=%B ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -i "BREAKING CHANGE"; then
+            echo "::warning title=Breaking Changes::This PR contains breaking changes"
+          fi
+
+      - name: Lint commit messages
+        run: |
+          # Basic commit message validation
+          git log --format=%B ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | \
+          while IFS= read -r line; do
+            if [[ -n "$line" && ${#line} -gt 72 ]]; then
+              echo "::warning title=Long Commit Message::Commit message line longer than 72 characters: $line"
+            fi
+          done
+
+      - name: Check version bump
+        run: |
+          # Check if version was bumped in pyproject.toml
+          if git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -q "pyproject.toml"; then
+            echo "::notice title=Version Update::pyproject.toml was modified - please ensure version was updated appropriately"
+          fi
+
+      - name: Run quick tests
+        run: |
+          poetry run pytest tests/ -x --tb=short --disable-warnings -q
+
+      - name: Check code formatting
+        run: |
+          poetry run black --check --diff .
+          poetry run ruff check .
+
+      - name: Type check
+        run: poetry run mypy .
+
+      - name: Check test coverage
+        run: |
+          poetry run pytest --cov=make_request --cov-report=term-missing --cov-fail-under=50
+
+  size-check:
+    name: Check PR Size
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check PR size
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const additions = pr.additions;
+            const deletions = pr.deletions;
+            const changes = additions + deletions;
+
+            console.log(`PR has ${additions} additions and ${deletions} deletions (${changes} total changes)`);
+
+            if (changes > 1000) {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `⚠️ This PR is quite large (${changes} lines changed). Consider breaking it into smaller PRs for easier review.`
+              });
+            } else if (changes > 500) {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `ℹ️ This PR has ${changes} lines changed. Please ensure all changes are necessary and well-tested.`
+              });
+            }
+
+  label-pr:
+    name: Auto-label PR
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Label PR based on files changed
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const labels = [];
+            const filenames = files.map(f => f.filename);
+
+            // Check for test files
+            if (filenames.some(f => f.startsWith('tests/'))) {
+              labels.push('tests');
+            }
+
+            // Check for documentation changes
+            if (filenames.some(f => f.endsWith('.md') || f.includes('docs'))) {
+              labels.push('documentation');
+            }
+
+            // Check for CI/CD changes
+            if (filenames.some(f => f.startsWith('.github/'))) {
+              labels.push('ci/cd');
+            }
+
+            // Check for dependency changes
+            if (filenames.some(f => ['pyproject.toml', 'poetry.lock'].includes(f))) {
+              labels.push('dependencies');
+            }
+
+            // Check for core code changes
+            if (filenames.some(f => f.startsWith('make_request/'))) {
+              labels.push('enhancement');
+            }
+
+            // Apply labels
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labels
+              });
+            }
