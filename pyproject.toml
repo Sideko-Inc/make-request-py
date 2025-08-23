@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "make-api-request"
-version = "0.1.0"
+version = "0.1.1"
 description = "A modern Python HTTP client library with built-in authentication and response handling"
 readme = "README.md"
 authors = ["Sideko <team@sideko.dev>"]
@@ -45,7 +45,7 @@ line-length = 88
 target-version = ['py38']
 
 [tool.ruff]
-target-version = "py38"
+target-version = "0.1.1"
 line-length = 88
 select = [
     "E",  # pycodestyle errors
@@ -66,7 +66,7 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "0.1.1"
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true
@@ -84,7 +84,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 
 [tool.pytest.ini_options]
-minversion = "7.0"
+minversion = "0.1.1"
 addopts = [
     "-ra",
     "--strict-markers",
