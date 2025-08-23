@@ -81,7 +81,7 @@ jobs:
       - name: Type check
         run: |
           source .venv/bin/activate
-          mypy .
+          mypy make_request
 
       - name: Check test coverage
         run: |

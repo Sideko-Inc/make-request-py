@@ -5,7 +5,7 @@ import datetime
 from typing import Any, Dict, List, Literal, Optional, Tuple, TypedDict, Union, cast
 
 import httpx
-import jsonpointer  # type: ignore
+import jsonpointer
 
 from .request import RequestConfig
 
