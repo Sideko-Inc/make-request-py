@@ -4,8 +4,8 @@ from typing import Any, Dict, Union
 import httpx
 import pytest
 
-from make_request.binary_response import BinaryResponse
-from make_request.utils import (
+from make_api_request.binary_response import BinaryResponse
+from make_api_request.utils import (
     filter_binary_response,
     get_response_type,
     is_union_type,

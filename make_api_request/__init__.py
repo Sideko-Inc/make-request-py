@@ -1,6 +1,4 @@
-"""make-request: A modern Python HTTP client library with built-in authentication and response handling."""
-
-__version__ = "0.1.0"
+"""make-api-request: A modern Python HTTP client library with built-in authentication and response handling."""
 
 from .api_error import ApiError
 from .auth import (

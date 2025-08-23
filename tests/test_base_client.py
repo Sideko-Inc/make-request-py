@@ -4,17 +4,17 @@ from unittest.mock import MagicMock, Mock, patch
 import httpx
 import pytest
 
-from make_request.api_error import ApiError
-from make_request.auth import AuthProvider
-from make_request.base_client import (
+from make_api_request.api_error import ApiError
+from make_api_request.auth import AuthProvider
+from make_api_request.base_client import (
     _DEFAULT_SERVICE_NAME,
     AsyncBaseClient,
     BaseClient,
     SyncBaseClient,
 )
-from make_request.binary_response import BinaryResponse
-from make_request.request import RequestConfig, RequestOptions
-from make_request.response import AsyncStreamResponse, StreamResponse
+from make_api_request.binary_response import BinaryResponse
+from make_api_request.request import RequestConfig, RequestOptions
+from make_api_request.response import AsyncStreamResponse, StreamResponse
 
 
 class MockAuthProvider(AuthProvider):
@@ -317,7 +317,7 @@ class TestBaseClient:
         assert result["headers"]["x-sideko-sdk-language"] == "Python"
         assert result["timeout"] == 30
 
-    @patch("make_request.utils.get_response_type", return_value="json")
+    @patch("make_api_request.utils.get_response_type", return_value="json")
     def test_process_response_204_status(self, mock_get_response_type):
         client = BaseClient("https://api.example.com")
         response = Mock()
@@ -327,7 +327,7 @@ class TestBaseClient:
 
         assert result is None
 
-    @patch("make_request.utils.get_response_type", return_value="json")
+    @patch("make_api_request.utils.get_response_type", return_value="json")
     def test_process_response_none_type(self, mock_get_response_type):
         client = BaseClient("https://api.example.com")
         response = Mock()
@@ -350,7 +350,7 @@ class TestBaseClient:
         assert result.content == b"binary data"
         assert result.headers == {"content-type": "application/octet-stream"}
 
-    @patch("make_request.utils.get_response_type", return_value="json")
+    @patch("make_api_request.utils.get_response_type", return_value="json")
     def test_process_response_json_any_type(self, mock_get_response_type):
         client = BaseClient("https://api.example.com")
         response = Mock(spec=httpx.Response)
@@ -362,7 +362,7 @@ class TestBaseClient:
 
         assert result == {"key": "value"}
 
-    @patch("make_request.utils.get_response_type", return_value="json")
+    @patch("make_api_request.utils.get_response_type", return_value="json")
     def test_process_response_json_with_cast(self, mock_get_response_type):
         client = BaseClient("https://api.example.com")
         response = Mock(spec=httpx.Response)
@@ -377,7 +377,7 @@ class TestBaseClient:
         assert isinstance(result, dict)
         assert "key" in result
 
-    @patch("make_request.utils.get_response_type", return_value="text")
+    @patch("make_api_request.utils.get_response_type", return_value="text")
     def test_process_response_text(self, mock_get_response_type):
         client = BaseClient("https://api.example.com")
         response = Mock(spec=httpx.Response)
@@ -389,7 +389,7 @@ class TestBaseClient:
 
         assert result == "text response"
 
-    @patch("make_request.utils.get_response_type", return_value="binary")
+    @patch("make_api_request.utils.get_response_type", return_value="binary")
     def test_process_response_binary(self, mock_get_response_type):
         client = BaseClient("https://api.example.com")
         response = Mock()
@@ -426,7 +426,7 @@ class TestSyncBaseClient:
         response.headers = httpx.Headers({"content-type": "application/json"})
         httpx_client.request.return_value = response
 
-        with patch("make_request.utils.get_response_type", return_value="json"):
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
             client = SyncBaseClient(
                 base_url="https://api.example.com", httpx_client=httpx_client
             )
@@ -516,7 +516,7 @@ class TestAsyncBaseClient:
 
         httpx_client.request = mock_request
 
-        with patch("make_request.utils.get_response_type", return_value="json"):
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
             client = AsyncBaseClient(
                 base_url="https://api.example.com", httpx_client=httpx_client
             )

@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from make_request.request import (
+from make_api_request.request import (
     _get_default_for_type,
     default_request_options,
     filter_not_given,
@@ -13,7 +13,7 @@ from make_request.request import (
     to_encodable,
     to_form_urlencoded,
 )
-from make_request.type_utils import NOT_GIVEN
+from make_api_request.type_utils import NOT_GIVEN
 
 
 class RequestTestModel(BaseModel):

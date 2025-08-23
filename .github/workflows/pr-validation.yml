@@ -81,12 +81,12 @@ jobs:
       - name: Type check
         run: |
           source .venv/bin/activate
-          mypy make_request
+          mypy make_api_request
 
       - name: Check test coverage
         run: |
           source .venv/bin/activate
-          pytest --cov=make_request --cov-report=term-missing --cov-fail-under=50
+          pytest --cov=make_api_request --cov-report=term-missing --cov-fail-under=50
 
   size-check:
     name: Check PR Size
@@ -171,7 +171,7 @@ jobs:
             }
 
             // Check for core code changes
-            if (filenames.some(f => f.startsWith('make_request/'))) {
+            if (filenames.some(f => f.startsWith('make_api_request/'))) {
               labels.push('enhancement');
             }
 

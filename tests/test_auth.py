@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from make_request.auth import (
+from make_api_request.auth import (
     AuthBasic,
     AuthBearer,
     AuthKey,
@@ -13,7 +13,7 @@ from make_request.auth import (
     OAuth2ClientCredentials,
     OAuth2Password,
 )
-from make_request.request import RequestConfig
+from make_api_request.request import RequestConfig
 
 
 class MockAuthProvider(AuthProvider):

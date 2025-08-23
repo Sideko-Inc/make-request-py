@@ -1,6 +1,6 @@
 import httpx
 
-from make_request import ApiError
+from make_api_request import ApiError
 
 
 def test_api_error_with_json_body():

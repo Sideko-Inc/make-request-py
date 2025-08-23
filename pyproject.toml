@@ -3,13 +3,13 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "make-request"
+name = "make-api-request"
 version = "0.1.0"
 description = "A modern Python HTTP client library with built-in authentication and response handling"
 readme = "README.md"
 authors = ["Sideko <team@sideko.dev>"]
 license = "MIT"
-packages = [{ include = "make_request" }]
+packages = [{ include = "make_api_request" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -89,7 +89,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=make_request",
+    "--cov=make_api_request",
     "--cov-branch",
     "--cov-report=term-missing",
     "--cov-fail-under=80",
@@ -98,7 +98,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.coverage.run]
-source = ["make_request"]
+source = ["make_api_request"]
 branch = true
 
 [tool.coverage.report]

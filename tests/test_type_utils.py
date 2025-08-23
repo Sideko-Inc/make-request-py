@@ -1,4 +1,4 @@
-from make_request.type_utils import NOT_GIVEN, NotGiven, NotGivenOr
+from make_api_request.type_utils import NOT_GIVEN, NotGiven, NotGivenOr
 
 
 class TestNotGiven:

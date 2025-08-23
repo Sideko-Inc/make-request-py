@@ -7,7 +7,7 @@ test:  ## Run tests
 	poetry run pytest
 
 test-cov:  ## Run tests with coverage
-	poetry run pytest --cov=make_request --cov-report=term-missing
+	poetry run pytest --cov=make_api_request --cov-report=term-missing
 
 lint:  ## Run linting
 	poetry run ruff check .
@@ -18,7 +18,7 @@ format:  ## Format code
 	poetry run ruff check --fix .
 
 typecheck:  ## Run type checking
-	poetry run mypy .
+	poetry run mypy make_api_request
 
 release-patch:  ## Release patch version (1.0.0 -> 1.0.1)
 	python3 scripts/release.py patch

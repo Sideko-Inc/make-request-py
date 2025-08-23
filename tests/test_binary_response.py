@@ -1,6 +1,6 @@
 from httpx import Headers
 
-from make_request.binary_response import BinaryResponse
+from make_api_request.binary_response import BinaryResponse
 
 
 class TestBinaryResponse:

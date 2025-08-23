@@ -1,4 +1,4 @@
-# make-request
+# make-api-request
 
 A modern Python HTTP client library with built-in authentication and response handling.
 
@@ -14,13 +14,13 @@ A modern Python HTTP client library with built-in authentication and response ha
 ## Installation
 
 ```bash
-pip install make-request
+pip install make-api-request
 ```
 
 Or with Poetry:
 
 ```bash
-poetry add make-request
+poetry add make-api-request
 ```
 
 ## Quick Start
@@ -29,7 +29,7 @@ poetry add make-request
 
 ```python
 import asyncio
-from make_request import AsyncBaseClient
+from make_api_request import AsyncBaseClient
 
 async def main():
     client = AsyncBaseClient("https://api.example.com")
@@ -44,7 +44,7 @@ asyncio.run(main())
 ### With Authentication
 
 ```python
-from make_request import AsyncBaseClient, AuthBearer
+from make_api_request import AsyncBaseClient, AuthBearer
 
 async def main():
     # Bearer token authentication
@@ -63,7 +63,7 @@ asyncio.run(main())
 ### Synchronous Usage
 
 ```python
-from make_request import SyncBaseClient, AuthKey
+from make_api_request import SyncBaseClient, AuthKey
 
 # API key authentication
 auth = AuthKey("x-api-key", "your-api-key")
@@ -81,7 +81,7 @@ print(response)
 ### API Key Authentication
 
 ```python
-from make_request import AuthKey
+from make_api_request import AuthKey
 
 # Header-based API key
 auth = AuthKey("x-api-key", "your-api-key")
@@ -93,7 +93,7 @@ auth = AuthKey("api_key", "your-api-key", location="query")
 ### Bearer Token
 
 ```python
-from make_request import AuthBearer
+from make_api_request import AuthBearer
 
 auth = AuthBearer("your-jwt-token")
 ```
@@ -101,7 +101,7 @@ auth = AuthBearer("your-jwt-token")
 ### Basic Authentication
 
 ```python
-from make_request import AuthBasic
+from make_api_request import AuthBasic
 
 auth = AuthBasic("username", "password")
 ```
@@ -109,7 +109,7 @@ auth = AuthBasic("username", "password")
 ### OAuth2
 
 ```python
-from make_request import OAuth2ClientCredentials
+from make_api_request import OAuth2ClientCredentials
 
 auth = OAuth2ClientCredentials(
     token_url="https://auth.example.com/token",
@@ -123,7 +123,7 @@ auth = OAuth2ClientCredentials(
 ### Custom Request Options
 
 ```python
-from make_request import RequestOptions
+from make_api_request import RequestOptions
 
 options = RequestOptions(
     timeout=30.0,
@@ -155,7 +155,7 @@ async with client.stream("GET", "/large-dataset") as response:
 ### Error Handling
 
 ```python
-from make_request import ApiError
+from make_api_request import ApiError
 
 try:
     response = await client.get("/might-fail")
@@ -220,7 +220,7 @@ poetry run black .
 poetry run ruff check .
 
 # Type checking
-poetry run mypy make_request/
+poetry run mypy make_api_request/
 ```
 
 ## License

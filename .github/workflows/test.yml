@@ -60,12 +60,12 @@ jobs:
       - name: Run type checking
         run: |
           source .venv/bin/activate
-          mypy make_request
+          mypy make_api_request
 
       - name: Run tests with coverage
         run: |
           source .venv/bin/activate
-          pytest --cov=make_request --cov-report=xml --cov-report=term-missing
+          pytest --cov=make_api_request --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -132,7 +132,7 @@ jobs:
           poetry run pip-audit --format=json --output=audit-results.json || true
           # Install bandit for additional security checks
           poetry run pip install bandit[toml]
-          poetry run bandit -r make_request/ -f json -o bandit-results.json || true
+          poetry run bandit -r make_api_request/ -f json -o bandit-results.json || true
 
       - name: Upload security results
         uses: actions/upload-artifact@v4

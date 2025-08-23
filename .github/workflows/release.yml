@@ -37,7 +37,7 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest --cov=make_request --cov-report=term-missing
+          pytest --cov=make_api_request --cov-report=term-missing
 
   build:
     name: Build distribution
@@ -100,7 +100,7 @@ jobs:
     needs: [build]
     environment:
       name: pypi
-      url: https://pypi.org/p/make-request
+      url: https://pypi.org/p/make-api-request
 
     steps:
       - name: Download build artifacts
@@ -120,7 +120,7 @@ jobs:
     needs: [build]
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/make-request
+      url: https://test.pypi.org/p/make-api-request
 
     steps:
       - name: Download build artifacts
@@ -133,7 +133,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          # Use trusted publishing for TestPyPI too
 
   github-release:
     name: Create GitHub Release

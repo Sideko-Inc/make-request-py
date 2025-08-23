@@ -1,6 +1,6 @@
 import pytest
 
-from make_request.query import (
+from make_api_request.query import (
     QueryParams,
     _encode_deep_object,
     _encode_deep_object_key,

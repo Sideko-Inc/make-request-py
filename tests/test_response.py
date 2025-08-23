@@ -5,7 +5,11 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
-from make_request.response import AsyncStreamResponse, StreamResponse, from_encodable
+from make_api_request.response import (
+    AsyncStreamResponse,
+    StreamResponse,
+    from_encodable,
+)
 
 
 class ResponseTestModel(BaseModel):
