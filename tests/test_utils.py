@@ -1,15 +1,16 @@
 import typing
-from typing import Union, Dict, Any
-import pytest
-import httpx
+from typing import Any, Dict, Union
 
+import httpx
+import pytest
+
+from make_request.binary_response import BinaryResponse
 from make_request.utils import (
-    remove_none_from_dict,
+    filter_binary_response,
     get_response_type,
     is_union_type,
-    filter_binary_response,
+    remove_none_from_dict,
 )
-from make_request.binary_response import BinaryResponse
 
 
 class TestRemoveNoneFromDict:
@@ -207,7 +208,7 @@ class TestFilterBinaryResponse:
         union_type = Union[str, BinaryResponse]
         result = filter_binary_response(union_type)
         # When only one type remains, should return that type directly
-        assert result == str
+        assert result is str
 
     def test_empty_union_filtered(self):
         # This would be an edge case - Union with only BinaryResponse
