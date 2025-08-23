@@ -52,19 +52,19 @@ jobs:
           queries: +security-and-quality
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
+        id: setup-python
         with:
           python-version: "3.11"
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
+        uses: snok/install-poetry@v1
+        with:
+          version: "1.8.5"
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          virtualenvs-path: .venv
+          installer-parallel: true
 
       - name: Install dependencies
         run: poetry install --no-interaction
@@ -82,28 +82,30 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
+        id: setup-python
         with:
           python-version: "3.11"
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
+        uses: snok/install-poetry@v1
+        with:
+          version: "1.8.5"
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          virtualenvs-path: .venv
+          installer-parallel: true
 
       - name: Install dependencies
         run: |
           poetry install --no-interaction
-          poetry run pip install pip-audit bandit[toml] safety
+          source .venv/bin/activate
+          pip install pip-audit bandit[toml] safety
 
       - name: Run pip-audit
         run: |
-          poetry run pip-audit --format=sarif --output=pip-audit.sarif --progress-spinner=off
+          source .venv/bin/activate
+          pip-audit --format=sarif --output=pip-audit.sarif --progress-spinner=off
         continue-on-error: true
 
       - name: Upload pip-audit results
@@ -115,7 +117,8 @@ jobs:
 
       - name: Run Bandit
         run: |
-          poetry run bandit -r make_request/ -f sarif -o bandit.sarif
+          source .venv/bin/activate
+          bandit -r make_request/ -f sarif -o bandit.sarif
         continue-on-error: true
 
       - name: Upload Bandit results
@@ -127,7 +130,8 @@ jobs:
 
       - name: Run Safety
         run: |
-          poetry run safety check --json --output safety.json
+          source .venv/bin/activate
+          safety check --json --output safety.json
         continue-on-error: true
 
       - name: Upload security results as artifacts

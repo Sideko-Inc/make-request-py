@@ -19,19 +19,19 @@ jobs:
           fetch-depth: 0  # Needed for conventional commit validation
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
+        id: setup-python
         with:
           python-version: "3.11"
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
+        uses: snok/install-poetry@v1
+        with:
+          version: "1.8.5"
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          virtualenvs-path: .venv
+          installer-parallel: true
 
       - name: Install dependencies
         run: poetry install --no-interaction
@@ -69,19 +69,24 @@ jobs:
 
       - name: Run quick tests
         run: |
-          poetry run pytest tests/ -x --tb=short --disable-warnings -q
+          source .venv/bin/activate
+          pytest tests/ -x --tb=short --disable-warnings -q
 
       - name: Check code formatting
         run: |
-          poetry run black --check --diff .
-          poetry run ruff check .
+          source .venv/bin/activate
+          black --check --diff .
+          ruff check .
 
       - name: Type check
-        run: poetry run mypy .
+        run: |
+          source .venv/bin/activate
+          mypy .
 
       - name: Check test coverage
         run: |
-          poetry run pytest --cov=make_request --cov-report=term-missing --cov-fail-under=50
+          source .venv/bin/activate
+          pytest --cov=make_request --cov-report=term-missing --cov-fail-under=50
 
   size-check:
     name: Check PR Size
