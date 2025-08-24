@@ -57,8 +57,7 @@ jobs:
 
       - name: Run type checking
         run: |
-          poetry run pip install mypy
-          poetry run mypy make_api_request
+          poetry run python -m mypy make_api_request
 
       - name: Run tests with coverage
         run: |
