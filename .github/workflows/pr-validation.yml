@@ -77,6 +77,7 @@ jobs:
 
       - name: Type check
         run: |
+          poetry install --with dev
           poetry run mypy make_api_request
 
       - name: Check test coverage
