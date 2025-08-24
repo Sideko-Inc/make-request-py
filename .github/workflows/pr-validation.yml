@@ -69,19 +69,23 @@ jobs:
 
       - name: Run quick tests
         run: |
-          poetry run pytest tests/ -x --tb=short --disable-warnings -q
+          source .venv/bin/activate
+          pytest tests/ -x --tb=short --disable-warnings -q
 
       - name: Check code formatting
         run: |
-          poetry run ruff check .
+          source .venv/bin/activate
+          ruff check .
 
       - name: Type check
         run: |
-          poetry run mypy make_api_request
+          source .venv/bin/activate
+          mypy make_api_request
 
       - name: Check test coverage
         run: |
-          poetry run pytest --cov=make_api_request --cov-report=term-missing --cov-fail-under=50
+          source .venv/bin/activate
+          pytest --cov=make_api_request --cov-report=term-missing --cov-fail-under=50
 
   size-check:
     name: Check PR Size
