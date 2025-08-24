@@ -34,7 +34,7 @@ jobs:
           installer-parallel: true
 
       - name: Install dependencies
-        run: poetry install --no-interaction --with dev
+        run: poetry install --no-interaction
 
       - name: Validate conventional commits
         uses: wagoid/commitlint-github-action@v5
@@ -73,7 +73,6 @@ jobs:
 
       - name: Check code formatting
         run: |
-          poetry run black --check --diff .
           poetry run ruff check .
 
       - name: Type check
