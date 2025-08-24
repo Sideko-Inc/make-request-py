@@ -71,9 +71,12 @@ def update_version_in_pyproject(new_version: str):
     pyproject_path = Path("pyproject.toml")
     content = pyproject_path.read_text()
 
-    # Replace version line
+    # Replace only the main package version line in [tool.poetry] section
     new_content = re.sub(
-        r'version\s*=\s*"[^"]+"', f'version = "{new_version}"', content
+        r'(\[tool\.poetry\].*?version\s*=\s*)"[^"]+"',
+        rf'\1"{new_version}"',
+        content,
+        flags=re.DOTALL,
     )
 
     pyproject_path.write_text(new_content)
