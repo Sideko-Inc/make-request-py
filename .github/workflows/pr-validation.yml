@@ -69,11 +69,11 @@ jobs:
 
       - name: Run quick tests
         run: |
-          poetry run pytest tests/ -x --tb=short --disable-warnings -q
+          poetry run python -m pytest tests/ -x --tb=short --disable-warnings -q
 
       - name: Check code formatting
         run: |
-          poetry run ruff check .
+          poetry run python -m ruff check .
 
       - name: Type check
         run: |
@@ -81,7 +81,7 @@ jobs:
 
       - name: Check test coverage
         run: |
-          poetry run pytest --cov=make_api_request --cov-report=term-missing --cov-fail-under=50
+          poetry run python -m pytest --cov=make_api_request --cov-report=term-missing --cov-fail-under=50
 
   size-check:
     name: Check PR Size
