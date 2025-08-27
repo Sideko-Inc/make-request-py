@@ -1,3 +1,4 @@
+from asyncio import sleep as async_sleep
 from time import sleep
 from typing import (
     Any,
@@ -24,7 +25,7 @@ from .request import (
     default_request_options,
 )
 from .response import AsyncStreamResponse, StreamResponse, from_encodable
-from .retry import RetryStrategy, should_retry
+from .retry import RetryConfig, RetryStrategy
 from .utils import filter_binary_response, get_response_type
 
 NoneType = type(None)
@@ -377,19 +378,15 @@ class SyncBaseClient(BaseClient):
     ) -> httpx.Response:
         response = self.httpx_client.request(**req_cfg)
 
-        retries = (request_options or {}).get("retries", self._retries)
-
-        if retries is not None:
-            retry_attempt = 1
-            delay = float(retries["initial_delay"])
-            while retry_attempt < retries["max_retries"] and should_retry(
-                response.status_code, retries["status_codes"]
-            ):
+        retry_override = (request_options or {}).get("retries")
+        if retry_override or self._retries:
+            retry = RetryConfig(base=self._retries, override=retry_override)
+            attempt = 1
+            delay = retry.initial_delay
+            while retry.should_retry(attempt=attempt, status_code=response.status_code):
                 sleep(delay / 1000)
                 response = self.httpx_client.request(**req_cfg)
-                delay = min(
-                    float(retries["max_delay"]), delay * retries["backoff_factor"]
-                )
+                delay = retry.calc_next_delay(curr_delay=delay)
 
         return response
 
@@ -548,19 +545,15 @@ class AsyncBaseClient(BaseClient):
     ) -> httpx.Response:
         response = await self.httpx_client.request(**req_cfg)
 
-        retries = (request_options or {}).get("retries", self._retries)
-
-        if retries is not None:
-            retry_attempt = 1
-            delay = float(retries["initial_delay"])
-            while retry_attempt < retries["max_retries"] and should_retry(
-                response.status_code, retries["status_codes"]
-            ):
-                sleep(delay / 1000)
+        retry_override = (request_options or {}).get("retries")
+        if retry_override or self._retries:
+            retry = RetryConfig(base=self._retries, override=retry_override)
+            attempt = 1
+            delay = retry.initial_delay
+            while retry.should_retry(attempt=attempt, status_code=response.status_code):
+                await async_sleep(delay / 1000)
                 response = await self.httpx_client.request(**req_cfg)
-                delay = min(
-                    float(retries["max_delay"]), delay * retries["backoff_factor"]
-                )
+                delay = retry.calc_next_delay(curr_delay=delay)
 
         return response
 
