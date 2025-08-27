@@ -387,6 +387,7 @@ class SyncBaseClient(BaseClient):
                 sleep(delay / 1000)
                 response = self.httpx_client.request(**req_cfg)
                 delay = retry.calc_next_delay(curr_delay=delay)
+                attempt += 1
 
         return response
 
@@ -554,6 +555,7 @@ class AsyncBaseClient(BaseClient):
                 await async_sleep(delay / 1000)
                 response = await self.httpx_client.request(**req_cfg)
                 delay = retry.calc_next_delay(curr_delay=delay)
+                attempt += 1
 
         return response
 
