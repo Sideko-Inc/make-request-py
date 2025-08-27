@@ -47,13 +47,13 @@ class RetryConfig:
         base: Optional[RetryStrategy] = None,
         override: Optional[RetryStrategy] = None
     ):
-        base: RetryStrategy = base or {}
-        override: RetryStrategy = override or {}
+        _base: RetryStrategy = base or {}
+        _override: RetryStrategy = override or {}
 
-        self.max_retries = override.get("max_retries", base.get("max_retries", 5))
-        self.status_codes = override.get(
+        self.max_retries = _override.get("max_retries", _base.get("max_retries", 5))
+        self.status_codes = _override.get(
             "status_codes",
-            base.get(
+            _base.get(
                 "status_codes",
                 [
                     5,  # 5XX
@@ -63,12 +63,12 @@ class RetryConfig:
                 ],
             ),
         )
-        self.initial_delay = override.get(
-            "initial_delay", base.get("initial_delay", 500)
+        self.initial_delay = _override.get(
+            "initial_delay", _base.get("initial_delay", 500)
         )
-        self.max_delay = override.get("max_delay", base.get("max_delay", 10000))
-        self.backoff_factor = override.get(
-            "backoff_factor", base.get("backoff_factor", 2.0)
+        self.max_delay = _override.get("max_delay", _base.get("max_delay", 10000))
+        self.backoff_factor = _override.get(
+            "backoff_factor", _base.get("backoff_factor", 2.0)
         )
 
     def _matches_code(self, status_code: int, retry_code: int) -> bool:

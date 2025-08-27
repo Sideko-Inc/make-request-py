@@ -382,7 +382,7 @@ class SyncBaseClient(BaseClient):
         if retry_override or self._retries:
             retry = RetryConfig(base=self._retries, override=retry_override)
             attempt = 1
-            delay = retry.initial_delay
+            delay = float(retry.initial_delay)
             while retry.should_retry(attempt=attempt, status_code=response.status_code):
                 sleep(delay / 1000)
                 response = self.httpx_client.request(**req_cfg)
@@ -550,7 +550,7 @@ class AsyncBaseClient(BaseClient):
         if retry_override or self._retries:
             retry = RetryConfig(base=self._retries, override=retry_override)
             attempt = 1
-            delay = retry.initial_delay
+            delay = float(retry.initial_delay)
             while retry.should_retry(attempt=attempt, status_code=response.status_code):
                 await async_sleep(delay / 1000)
                 response = await self.httpx_client.request(**req_cfg)
