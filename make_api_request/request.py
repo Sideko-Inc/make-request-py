@@ -5,6 +5,7 @@ from pydantic import BaseModel, TypeAdapter
 from typing_extensions import NotRequired, Required, TypedDict
 
 from .query import QueryParams, QueryParamStyle, encode_query_param
+from .retry import RetryStrategy
 from .type_utils import NotGiven
 
 """
@@ -54,6 +55,7 @@ class RequestOptions(TypedDict):
     timeout: NotRequired[int]
     additional_headers: NotRequired[Dict[str, str]]
     additional_params: NotRequired[QueryParams]
+    retries: NotRequired[RetryStrategy]
 
 
 def default_request_options() -> RequestOptions:

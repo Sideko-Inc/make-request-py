@@ -137,6 +137,3 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Poetry
-poetry.lock
