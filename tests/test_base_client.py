@@ -15,6 +15,7 @@ from make_api_request.base_client import (
 from make_api_request.binary_response import BinaryResponse
 from make_api_request.request import RequestConfig, RequestOptions
 from make_api_request.response import AsyncStreamResponse, StreamResponse
+from make_api_request.retry import RetryStrategy
 
 
 class MockAuthProvider(AuthProvider):
@@ -594,3 +595,363 @@ class TestAsyncBaseClient:
         assert result.response == response
         assert result.cast_to == dict  # noqa: E721
         httpx_client.stream.assert_called_once()
+
+
+class TestRetryStrategy:
+    @patch("make_api_request.base_client.sleep")
+    def test_sync_client_retries_on_500_status(self, mock_sleep):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # First call fails with 500, second succeeds
+        responses = [
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(
+                spec=httpx.Response,
+                is_success=True,
+                status_code=200,
+                json=Mock(return_value={"result": "success"}),
+                headers=httpx.Headers({"content-type": "application/json"}),
+            ),
+        ]
+        httpx_client.request.side_effect = responses
+
+        retry_strategy: RetryStrategy = {"max_retries": 2, "initial_delay": 100}
+        client = SyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
+            result = client.request(method="GET", path="/test", cast_to=type(Any))
+
+        assert result == {"result": "success"}
+        assert httpx_client.request.call_count == 2
+        mock_sleep.assert_called_once_with(0.1)  # 100ms / 1000
+
+    @patch("make_api_request.base_client.sleep")
+    def test_sync_client_retries_with_exponential_backoff(self, mock_sleep):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # All calls fail with 500 except the last one
+        responses = [
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(
+                spec=httpx.Response,
+                is_success=True,
+                status_code=200,
+                json=Mock(return_value={"result": "success"}),
+                headers=httpx.Headers({"content-type": "application/json"}),
+            ),
+        ]
+        httpx_client.request.side_effect = responses
+
+        retry_strategy: RetryStrategy = {
+            "max_retries": 3,
+            "initial_delay": 100,
+            "backoff_factor": 2.0,
+            "max_delay": 1000,
+        }
+        client = SyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
+            result = client.request(method="GET", path="/test", cast_to=type(Any))
+
+        assert result == {"result": "success"}
+        assert httpx_client.request.call_count == 3
+        # Should sleep 0.1s (100ms), then 0.2s (200ms)
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_any_call(0.1)
+        mock_sleep.assert_any_call(0.2)
+
+    @patch("make_api_request.base_client.sleep")
+    def test_sync_client_respects_max_retries(self, mock_sleep):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # All calls fail with 500
+        response = Mock(spec=httpx.Response, is_success=False, status_code=500)
+        httpx_client.request.return_value = response
+
+        retry_strategy: RetryStrategy = {"max_retries": 2, "initial_delay": 100}
+        client = SyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with pytest.raises(ApiError):
+            client.request(method="GET", path="/test", cast_to=dict)
+
+        # Should call 1 initial + 2 retries = 3 total calls
+        assert httpx_client.request.call_count == 3
+        # Should sleep twice (before each retry)
+        assert mock_sleep.call_count == 2
+
+    @patch("make_api_request.base_client.sleep")
+    def test_sync_client_retries_on_configured_status_codes(self, mock_sleep):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # First call fails with 429, second succeeds
+        responses = [
+            Mock(spec=httpx.Response, is_success=False, status_code=429),
+            Mock(
+                spec=httpx.Response,
+                is_success=True,
+                status_code=200,
+                json=Mock(return_value={"result": "success"}),
+                headers=httpx.Headers({"content-type": "application/json"}),
+            ),
+        ]
+        httpx_client.request.side_effect = responses
+
+        retry_strategy: RetryStrategy = {
+            "max_retries": 2,
+            "status_codes": [429, 5],  # 429 and 5XX range
+            "initial_delay": 100,
+        }
+        client = SyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
+            result = client.request(method="GET", path="/test", cast_to=type(Any))
+
+        assert result == {"result": "success"}
+        assert httpx_client.request.call_count == 2
+        mock_sleep.assert_called_once_with(0.1)
+
+    @patch("make_api_request.base_client.sleep")
+    def test_sync_client_does_not_retry_on_non_configured_status_codes(
+        self, mock_sleep
+    ):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # Call fails with 404 (not in retry codes)
+        response = Mock(spec=httpx.Response, is_success=False, status_code=404)
+        httpx_client.request.return_value = response
+
+        retry_strategy: RetryStrategy = {
+            "max_retries": 2,
+            "status_codes": [5],  # Only 5XX range
+            "initial_delay": 100,
+        }
+        client = SyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with pytest.raises(ApiError):
+            client.request(method="GET", path="/test", cast_to=dict)
+
+        # Should only call once (no retries for 404)
+        assert httpx_client.request.call_count == 1
+        mock_sleep.assert_not_called()
+
+    @patch("make_api_request.base_client.sleep")
+    def test_sync_client_request_options_override_retries(self, mock_sleep):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # First call fails with 500, second succeeds
+        responses = [
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(
+                spec=httpx.Response,
+                is_success=True,
+                status_code=200,
+                json=Mock(return_value={"result": "success"}),
+                headers=httpx.Headers({"content-type": "application/json"}),
+            ),
+        ]
+        httpx_client.request.side_effect = responses
+
+        # Base retry strategy with different delay
+        base_retry_strategy: RetryStrategy = {"max_retries": 2, "initial_delay": 500}
+        client = SyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=base_retry_strategy,
+        )
+
+        # Override with different delay
+        override_retry: RetryStrategy = {"initial_delay": 200}
+        request_options: RequestOptions = {"retries": override_retry}
+
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
+            result = client.request(
+                method="GET",
+                path="/test",
+                cast_to=type(Any),
+                request_options=request_options,
+            )
+
+        assert result == {"result": "success"}
+        assert httpx_client.request.call_count == 2
+        # Should use override delay (200ms)
+        mock_sleep.assert_called_once_with(0.2)
+
+    @pytest.mark.asyncio
+    @patch("make_api_request.base_client.async_sleep")
+    async def test_async_client_retries_on_500_status(self, mock_async_sleep):
+        httpx_client = Mock(spec=httpx.AsyncClient)
+
+        # First call fails with 500, second succeeds
+        responses = [
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(
+                spec=httpx.Response,
+                is_success=True,
+                status_code=200,
+                json=Mock(return_value={"result": "success"}),
+                headers=httpx.Headers({"content-type": "application/json"}),
+            ),
+        ]
+
+        async def mock_request(*_args, **_kwargs):
+            return responses.pop(0)
+
+        httpx_client.request = mock_request
+
+        retry_strategy: RetryStrategy = {"max_retries": 2, "initial_delay": 100}
+        client = AsyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
+            result = await client.request(method="GET", path="/test", cast_to=type(Any))
+
+        assert result == {"result": "success"}
+        mock_async_sleep.assert_called_once_with(0.1)  # 100ms / 1000
+
+    @pytest.mark.asyncio
+    @patch("make_api_request.base_client.async_sleep")
+    async def test_async_client_retries_with_exponential_backoff(
+        self, mock_async_sleep
+    ):
+        httpx_client = Mock(spec=httpx.AsyncClient)
+
+        # Track request calls
+        request_call_count = 0
+        responses = [
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(spec=httpx.Response, is_success=False, status_code=500),
+            Mock(
+                spec=httpx.Response,
+                is_success=True,
+                status_code=200,
+                json=Mock(return_value={"result": "success"}),
+                headers=httpx.Headers({"content-type": "application/json"}),
+            ),
+        ]
+
+        async def mock_request(*_args, **_kwargs):
+            nonlocal request_call_count
+            response = responses[request_call_count]
+            request_call_count += 1
+            return response
+
+        httpx_client.request = mock_request
+
+        retry_strategy: RetryStrategy = {
+            "max_retries": 3,
+            "initial_delay": 100,
+            "backoff_factor": 2.0,
+            "max_delay": 1000,
+        }
+        client = AsyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with patch("make_api_request.utils.get_response_type", return_value="json"):
+            result = await client.request(method="GET", path="/test", cast_to=type(Any))
+
+        assert result == {"result": "success"}
+        assert request_call_count == 3
+        # Should sleep 0.1s (100ms), then 0.2s (200ms)
+        assert mock_async_sleep.call_count == 2
+        mock_async_sleep.assert_any_call(0.1)
+        mock_async_sleep.assert_any_call(0.2)
+
+    @pytest.mark.asyncio
+    @patch("make_api_request.base_client.async_sleep")
+    async def test_async_client_respects_max_retries(self, mock_async_sleep):
+        httpx_client = Mock(spec=httpx.AsyncClient)
+
+        # All calls fail with 500
+        request_call_count = 0
+
+        async def mock_request(*_args, **_kwargs):
+            nonlocal request_call_count
+            request_call_count += 1
+            return Mock(spec=httpx.Response, is_success=False, status_code=500)
+
+        httpx_client.request = mock_request
+
+        retry_strategy: RetryStrategy = {"max_retries": 2, "initial_delay": 100}
+        client = AsyncBaseClient(
+            base_url="https://api.example.com",
+            httpx_client=httpx_client,
+            retries=retry_strategy,
+        )
+
+        with pytest.raises(ApiError):
+            await client.request(method="GET", path="/test", cast_to=dict)
+
+        # Should call 1 initial + 2 retries = 3 total calls
+        assert request_call_count == 3
+        # Should sleep twice (before each retry)
+        assert mock_async_sleep.call_count == 2
+
+    def test_sync_client_no_retries_when_not_configured(self):
+        httpx_client = Mock(spec=httpx.Client)
+
+        # Call fails with 500
+        response = Mock(spec=httpx.Response, is_success=False, status_code=500)
+        httpx_client.request.return_value = response
+
+        # No retry strategy configured
+        client = SyncBaseClient(
+            base_url="https://api.example.com", httpx_client=httpx_client
+        )
+
+        with pytest.raises(ApiError):
+            client.request(method="GET", path="/test", cast_to=dict)
+
+        # Should only call once (no retries)
+        assert httpx_client.request.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_async_client_no_retries_when_not_configured(self):
+        httpx_client = Mock(spec=httpx.AsyncClient)
+
+        # Call fails with 500
+        request_call_count = 0
+
+        async def mock_request(*_args, **_kwargs):
+            nonlocal request_call_count
+            request_call_count += 1
+            return Mock(spec=httpx.Response, is_success=False, status_code=500)
+
+        httpx_client.request = mock_request
+
+        # No retry strategy configured
+        client = AsyncBaseClient(
+            base_url="https://api.example.com", httpx_client=httpx_client
+        )
+
+        with pytest.raises(ApiError):
+            await client.request(method="GET", path="/test", cast_to=dict)
+
+        # Should only call once (no retries)
+        assert request_call_count == 1

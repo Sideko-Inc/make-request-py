@@ -87,7 +87,7 @@ class RetryConfig:
         """
         Checks if a retry is allowed according to the config
         """
-        return attempt < self.max_retries and any(
+        return attempt <= self.max_retries and any(
             self._matches_code(status_code, c) for c in self.status_codes
         )
 
