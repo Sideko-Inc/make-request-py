@@ -23,6 +23,7 @@ from .request import (
     to_form_urlencoded,
 )
 from .response import AsyncStreamResponse, StreamResponse, from_encodable
+from .retry import RetryStrategy
 
 __all__ = [
     "ApiError",
@@ -49,4 +50,5 @@ __all__ = [
     "AsyncStreamResponse",
     "StreamResponse",
     "QueryParams",
+    "RetryStrategy",
 ]

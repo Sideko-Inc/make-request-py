@@ -1,3 +1,5 @@
+from asyncio import sleep as async_sleep
+from time import sleep
 from typing import (
     Any,
     Dict,
@@ -17,8 +19,13 @@ from .api_error import ApiError
 from .auth import AuthProvider
 from .binary_response import BinaryResponse
 from .query import QueryParams
-from .request import RequestConfig, RequestOptions, default_request_options
+from .request import (
+    RequestConfig,
+    RequestOptions,
+    default_request_options,
+)
 from .response import AsyncStreamResponse, StreamResponse, from_encodable
+from .retry import RetryConfig, RetryStrategy
 from .utils import filter_binary_response, get_response_type
 
 NoneType = type(None)
@@ -43,6 +50,7 @@ class BaseClient:
         self,
         base_url: Union[str, Dict[str, str]],
         auths: Optional[Dict[str, AuthProvider]] = None,
+        retries: Optional[RetryStrategy] = None,
     ):
         """Initialize the base client"""
         self._base_url = (
@@ -51,6 +59,7 @@ class BaseClient:
             else {_DEFAULT_SERVICE_NAME: base_url}
         )
         self._auths: Dict[str, AuthProvider] = auths or {}
+        self._retries = retries
 
     def register_auth(self, auth_id: str, provider: AuthProvider) -> None:
         """Register an authentication provider.
@@ -351,14 +360,36 @@ class SyncBaseClient(BaseClient):
         base_url: Union[str, Dict[str, str]],
         httpx_client: httpx.Client,
         auths: Optional[Dict[str, AuthProvider]] = None,
+        retries: Optional[RetryStrategy] = None,
     ):
         """Initialize the synchronous client.
 
         Args:
             httpx_client: Synchronous HTTPX client instance
         """
-        super().__init__(base_url=base_url, auths=auths)
+        super().__init__(base_url=base_url, auths=auths, retries=retries)
         self.httpx_client = httpx_client
+
+    def _request_with_retires(
+        self,
+        *,
+        req_cfg: RequestConfig,
+        request_options: Optional[RequestOptions] = None,
+    ) -> httpx.Response:
+        response = self.httpx_client.request(**req_cfg)
+
+        retry_override = (request_options or {}).get("retries")
+        if retry_override or self._retries:
+            retry = RetryConfig(base=self._retries, override=retry_override)
+            attempt = 1
+            delay = float(retry.initial_delay)
+            while retry.should_retry(attempt=attempt, status_code=response.status_code):
+                sleep(delay / 1000)
+                response = self.httpx_client.request(**req_cfg)
+                delay = retry.calc_next_delay(curr_delay=delay)
+                attempt += 1
+
+        return response
 
     def request(
         self,
@@ -414,7 +445,9 @@ class SyncBaseClient(BaseClient):
             content=content,
             request_options=request_options,
         )
-        response = self.httpx_client.request(**req_cfg)
+        response = self._request_with_retires(
+            req_cfg=req_cfg, request_options=request_options
+        )
 
         if not response.is_success:
             raise ApiError(response=response)
@@ -495,14 +528,36 @@ class AsyncBaseClient(BaseClient):
         base_url: Union[str, Dict[str, str]],
         httpx_client: httpx.AsyncClient,
         auths: Optional[Dict[str, AuthProvider]] = None,
+        retries: Optional[RetryStrategy] = None,
     ):
         """Initialize the asynchronous client.
 
         Args:
             httpx_client: Asynchronous HTTPX client instance
         """
-        super().__init__(base_url=base_url, auths=auths)
+        super().__init__(base_url=base_url, auths=auths, retries=retries)
         self.httpx_client = httpx_client
+
+    async def _request_with_retires(
+        self,
+        *,
+        req_cfg: RequestConfig,
+        request_options: Optional[RequestOptions] = None,
+    ) -> httpx.Response:
+        response = await self.httpx_client.request(**req_cfg)
+
+        retry_override = (request_options or {}).get("retries")
+        if retry_override or self._retries:
+            retry = RetryConfig(base=self._retries, override=retry_override)
+            attempt = 1
+            delay = float(retry.initial_delay)
+            while retry.should_retry(attempt=attempt, status_code=response.status_code):
+                await async_sleep(delay / 1000)
+                response = await self.httpx_client.request(**req_cfg)
+                delay = retry.calc_next_delay(curr_delay=delay)
+                attempt += 1
+
+        return response
 
     async def request(
         self,
@@ -558,7 +613,9 @@ class AsyncBaseClient(BaseClient):
             content=content,
             request_options=request_options,
         )
-        response = await self.httpx_client.request(**req_cfg)
+        response = await self._request_with_retires(
+            req_cfg=req_cfg, request_options=request_options
+        )
 
         if not response.is_success:
             raise ApiError(response=response)
