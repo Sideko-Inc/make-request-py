@@ -58,7 +58,7 @@ def bump_version(current: str, bump_type: str) -> str:
         parts[2] = 0
     else:
         # Assume it's a specific version
-        if not re.match(r"^\d+\.\d+\.\d+$", bump_type):
+        if not re.match(r"^\d+\.\d+\.\d+(:?-rc\.\d+)?$", bump_type):
             print(f"Error: Invalid version format: {bump_type}")
             sys.exit(1)
         return bump_type
