@@ -45,7 +45,7 @@ def get_current_version() -> str:
 
 def bump_version(current: str, bump_type: str) -> str:
     """Bump version based on type (patch, minor, major)."""
-    parts = [int(x) for x in current.split(".")]
+    parts = [int(x) for x in re.split(r"[.-]", current)[:3]]
 
     if bump_type == "patch":
         parts[2] += 1
